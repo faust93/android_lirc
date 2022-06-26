@@ -123,7 +123,8 @@ static  const char* const help =
 "\t -u --uinput\t\t\tgenerate Linux input events\n"
 #       endif
 "\t -e --effective-uid=uid\t\tRun as uid after init as root\n"
-"\t -R --repeat-max=limit\t\tallow at most this many repeats\n";
+"\t -R --repeat-max=limit\t\tallow at most this many repeats\n"
+"\t -S --dedup-delay=time_ms\tdelay to impose between the same key pressed\n";
 
 
 
@@ -152,6 +153,7 @@ static const struct option lircd_options[] = {
 	{"uinput", no_argument, NULL, 'u'},
 #        endif
 	{"repeat-max", required_argument, NULL, 'R'},
+	{"dedup-delay", required_argument, NULL, 'S'},
 	{0, 0, 0, 0}
 };
 
@@ -226,6 +228,8 @@ extern struct ir_remote *decoding;
 static int repeat_fd = -1;
 static char *repeat_message = NULL;
 static __u32 repeat_max = REPEAT_MAX_DEFAULT;
+
+static int dedup_delay = 0;
 
 extern struct driver hw;
 
@@ -2004,7 +2008,8 @@ static int mywaitfordata(long maxusec)
 				FD_SET(sockinet, &fds);
 				maxfd = max(maxfd, sockinet);
 			}
-			if (use_hw() && curr_driver->rec_mode != 0 && curr_driver->fd != -1) {
+
+			if (use_hw() && curr_driver->rec_mode != 0 && curr_driver->fd != 0) {
 				FD_SET(curr_driver->fd, &fds);
 				maxfd = max(maxfd, curr_driver->fd);
 			}
@@ -2048,7 +2053,7 @@ static int mywaitfordata(long maxusec)
 				tv.tv_sec = maxusec / 1000000;
 				tv.tv_usec = maxusec % 1000000;
 			}
-			if (curr_driver->fd == -1 && use_hw()) {
+			if (curr_driver->fd == 0 && use_hw()) {
 				/* try to reconnect */
 				timerclear(&timeout);
 				timeout.tv_sec = 1;
@@ -2087,12 +2092,14 @@ static int mywaitfordata(long maxusec)
 				continue;
 			}
 			gettimeofday(&now, NULL);
-			if (timerisset(&release_time) && timercmp(&now, &release_time, >)) {
+			if (timerisset(&release_time) && timercmp(&now, &release_time - dedup_delay, >)) {
 				const char *release_message;
 				const char *release_remote_name;
 				const char *release_button_name;
 
 				release_message = trigger_release_event(&release_remote_name, &release_button_name);
+				logprintf(LIRC_ERROR, "RELEASE");
+
 				if (release_message) {
 					input_message(release_message, release_remote_name, release_button_name, 0, 1);
 				}
@@ -2117,7 +2124,7 @@ static int mywaitfordata(long maxusec)
 		}
 		while (ret == -1 && errno == EINTR);
 
-		if (curr_driver->fd == -1 && use_hw() && curr_driver->init_func) {
+		if (curr_driver->fd == 0 && use_hw() && curr_driver->init_func) {
 			oldlevel = loglevel;
 			lirc_log_setlevel(LIRC_ERROR);
 			curr_driver->init_func();
@@ -2154,7 +2161,7 @@ static int mywaitfordata(long maxusec)
 			LOGPRINTF(1, "registering inet client");
 			add_client(sockinet);
 		}
-		if (use_hw() && curr_driver->rec_mode != 0 && curr_driver->fd != -1 && FD_ISSET(curr_driver->fd, &fds)) {
+		if (use_hw() && curr_driver->rec_mode != 0 && curr_driver->fd != 0 && FD_ISSET(curr_driver->fd, &fds)) {
 			register_input();
 			/* we will read later */
 			return (1);
@@ -2165,8 +2172,10 @@ static int mywaitfordata(long maxusec)
 void loop()
 {
 	char *message;
+        char prev_button_name[16];
+        struct timeval ptime, ctime, gap;
 
-	logprintf(LIRC_NOTICE, "lircd(%s) ready, using %s", curr_driver->name, lircdfile);
+	logprintf(LIRC_NOTICE, "lircd(%s) ready, using %s, dedup_delay: %d", curr_driver->name, lircdfile, dedup_delay);
 	while (1) {
 		(void)mywaitfordata(0);
 		if (!curr_driver->rec_func)
@@ -2183,6 +2192,16 @@ void loop()
 			}
 
 			get_release_data(&remote_name, &button_name, &reps);
+
+                        if(strcmp(button_name, prev_button_name) == 0) {
+                            gettimeofday(&ctime, NULL);
+                            timersub(&ctime, &ptime, &gap);
+                            if(gap.tv_usec <= dedup_delay)
+                                continue;
+                        }
+
+                        gettimeofday(&ptime, NULL);
+                        strcpy(prev_button_name, button_name);
 
 			input_message(message, remote_name, button_name, reps, 0);
 		}
@@ -2244,6 +2263,7 @@ static void lircd_add_defaults(void)
 		"lircd:configfile",  	LIRCDCFGFILE,
 		"lircd:driver-options", "",
 		"lircd:effective-user", "",
+		"lircd:dedup-delay", "0",
 
 		(const char*)NULL, 	(const char*)NULL
 	};
@@ -2271,7 +2291,7 @@ int parse_peer_connections(const char *opt)
 static void lircd_parse_options(int argc, char** const argv)
 {
 	int c;
-	const char* optstring = "A:e:O:hvnp:H:d:o:U:P:l::L:c:r::aR:D::Y"
+	const char* optstring = "A:e:O:hvnp:H:d:o:U:P:l::L:c:r::aR:S:D::Y"
 #       if defined(__linux__)
 		"u"
 #       endif
@@ -2360,6 +2380,9 @@ static void lircd_parse_options(int argc, char** const argv)
 			break;
 		case 'A':
 			options_set_opt("lircd:driver-options", optarg);
+			break;
+		case 'S':
+			options_set_opt("lircd:dedup-delay", optarg);
 			break;
 		default:
 			printf("Usage: %s [options] [config-file]\n", progname);
@@ -2450,6 +2473,7 @@ int main(int argc, char **argv)
 	useuinput = options_getboolean("lircd:uinput");
 #       endif
 	repeat_max = options_getint("lircd:repeat-max");
+	dedup_delay = options_getint("lircd:dedup-delay");
 	configfile = options_getstring("lircd:configfile");
 	curr_driver->open_func(device);
 	if (strcmp(curr_driver->name, "null") == 0 && peern == 0) {
