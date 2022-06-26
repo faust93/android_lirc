@@ -187,14 +187,14 @@ int default_init()
 	} else if (default_ioctl(LIRC_GET_FEATURES, &drv.features) == -1) {
 		logprintf(LIRC_ERROR, "could not get hardware features");
 		logprintf(LIRC_ERROR, "this device driver does not support the LIRC ioctl interface");
-		if (major(s.st_rdev) == 13) {
-			logprintf(LIRC_ERROR, "did you mean to use the devinput driver instead of the %s driver?",
-				  drv.name);
-		} else {
-			logprintf(LIRC_ERROR, "major number of %s is %lu", drv.device, (__u32) major(s.st_rdev));
-			logprintf(LIRC_ERROR, "make sure %s is a LIRC device and use a current version of the driver",
-				  drv.device);
-		}
+//		if (major(s.st_rdev) == 13) {
+//			logprintf(LIRC_ERROR, "did you mean to use the devinput driver instead of the %s driver?",
+//				  drv.name);
+//		} else {
+//			logprintf(LIRC_ERROR, "major number of %s is %lu", drv.device, (__u32) major(s.st_rdev));
+//			logprintf(LIRC_ERROR, "make sure %s is a LIRC device and use a current version of the driver",
+//				  drv.device);
+//		}
 		default_deinit();
 		return (0);
 	}
