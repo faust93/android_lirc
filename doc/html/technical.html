@@ -1,0 +1,488 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<HTML>
+  <HEAD>
+    <TITLE>LIRC - Linux Infrared Remote Control</TITLE>
+    <LINK REL=stylesheet TYPE="text/css" HREF="../lirc.css">
+    <LINK REL="shortcut icon" HREF="../favicon.ico">
+    <META NAME="description" CONTENT="LIRC - Linux Infra-red Remote Control">
+    <META NAME="keywords" CONTENT="linux, kernel module, remote control, animax, multimedia">
+  </HEAD>
+
+  <BODY BACKGROUND="../images/marb18.jpg"
+    BGCOLOR="#FFFFFF" TEXT="#000000" ALINK="#8080FF">
+    <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR>
+        <TD CLASS="menu" WIDTH="100%" HEIGHT="150">
+          <IMG SRC="../images/diode.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="LEFT">
+          <IMG SRC="../images/lirc.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="RIGHT">
+        </TD>
+      </TR>
+      <TR>
+        <TD WIDTH="100%">&#160;<BR>
+          <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+            <TR>
+              <TD WIDTH="15%">&#160;<BR></TD>
+              <TD WIDTH="70%" ALIGN="LEFT" VALIGN="TOP">&#160;<BR>
+
+<!-- Text ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+    <!-- Overview ++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+    <A NAME="overview"></A><HR>
+    <CENTER><H1>Driver Model</H1></CENTER>
+    <HR WIDTH="70%">
+
+    <PRE>
+  |  +---------------------------------------------------------------+
+S |  | 'gpm -t msc -m /var/run/lirc/lircm' or a well configured X    |
+O |  | (see section 'Configuring lircmd') for details                |
+F |  +--------------+------------------------------------------------+
+T |                 |
+W |   /var/run/lirc/lircm (named pipe (FIFO) ==&gt; one connection)
+A |                 |
+R |     +-----------+-----------+   +----------------------------------+
+E |     | mouse daemon (lircmd) |   | tools (irexec, irxevent, ...)    |
+  |     | configured with       |   | configured with ~/.config/lircrc |
+  |     | lircmd.conf           |   |                                  |
+  |     +-----------+-----------+   +-----------+----------------------+
+  |                 |                           |
+  |                 +-------------+-------------+
+  |                               |
+  |              /var/run/lirc/lircd (socket ==&gt; multiple connections)
+  |                               |
+S |              +----------------+--------------------------+
+O |              | decoder daemon (lircd), irrecord or mode2 |    TCP/IP
+F |              | lircd is configured through lircd.conf    +---  port
+T | User space   |                                           |     8765
+W |              +------------------+------------------------+
+A |                                 |            |
+R |                                 |            |
+E |                                 |            |
+  |                                 |   /dev/uinput (Linux input layer)
+  |                                 |
+  |                                 |
+  +---------------------------------+----------------------------------
+  | Kernel space                    |              (character device
+  |                                 |                  driver ==&gt;
+  |                    +------------+----------+    one connection)
+  |                    |                       |
+  |                /dev/lirc               /dev/ttySx
+  |                    |                       |
+  |       +------------+-------------+   +-----+---------------+
+  |       |  LIRC device driver      |   | Linux serial driver |
+  |       | (with ioctl-interface)   |   |                     |
+  |       +------------+-------------+   +----------+----------+
+  |                    |                            |
+--+--------------------+----------------------------+------------------
+  |                    |                            |
+  |         +----------+------------+               |
+  |         |                       |               |
+  | +-------+----------------+ +----+-----+ +-------+-----------------+
+H | | serial / parallel port | | TV cards | | Irman/RemoteMaster/etc. |
+W | +------------------------+ +----------+ +-------------------------+
+  |
+</PRE>
+
+    <A NAME="formats"></A><HR>
+    <H1 ALIGN="CENTER">Formats</H1>
+    <HR WIDTH="70%">
+
+    <UL>
+      <LI><B>/dev/lirc:</B><BR>
+        <P>
+          highly depends on the mode selected with ioctls:
+        </P>
+        <DL>
+          <DT>LIRC_MODE_MODE2</DT>
+          <DD>
+            <P>
+              outputs packets containing an int value describing a IR
+              signal
+            </P>
+            <UL>
+              <LI>bits 0-23 contain the length of the pulse/space in
+                microseconds</LI>
+              <LI>bits 31-24 can be:
+                <UL>
+                  <LI>0: space</LI>
+                  <LI>1: pulse</LI>
+                  <LI>2: timeout (has to be enabled using
+                    LIRC_SET_REC_TIMEOUT ioctl and is not supported by
+                    all receivers)</LI>
+                </UL>
+              </LI>
+              <LI>all other values are reserved</LI>
+            </UL>
+            <P>
+              Lengths greater than or equal to 16 seconds are clamped to
+              0xffffff.
+            </P>
+            <P>References:</P>
+            <UL>
+              <LI>drivers/lirc_serial/lirc_serial.c</LI>
+              <LI>drivers/lirc_parallel/lirc_parallel.c</LI>
+              <LI>tools/mode2.c (dumps the output from the driver to
+                stdout)</LI>
+            </UL>
+            <BR>
+          </DD>
+          <DT>LIRC_MODE_LIRCCODE</DT>
+          <DD>
+            <P>
+              outputs codes of configurable length in big endian byte
+              order
+            </P>
+          </DD>
+        </DL>
+      </LI>
+      <LI><B>/var/run/lirc/lircd:</B><BR>
+        <P>
+          outputs strings containing all information about the remote and the
+          pressed button.
+        </P>
+        <P>References:</P>
+        <UL>
+          <LI>daemons/lircd.c</LI>
+          <LI>tools/irw.c</LI>
+        </UL>
+        <BR>
+      </LI>
+      <LI><B>/var/run/lirc/lircm:</B><BR>
+        <BR>
+        <UL>
+          <LI>MouseSystems<BR>
+            5 byte packets:
+            <UL>
+              <LI>byte 1: button information</LI>
+              <LI>byte 2: change on X axis</LI>
+              <LI>byte 3: change on Y axis</LI>
+              <LI>byte 4,5: 0</LI>
+            </UL>
+          </LI>
+          <LI>IMPS/2<BR>
+            4 byte packets: check the source code for details
+          </LI>
+          <LI>IntelliMouse<BR>
+            4 byte packets: check the source code for details
+          </LI>
+        </UL>
+
+        <P>References:</P>
+        <UL>
+          <LI>daemons/lircmd.c</LI>
+        </UL>
+      </LI>
+    </UL>
+
+    <A NAME="lirc_dev"></A><HR>
+    <H1 ALIGN="CENTER">Writing TV card drivers using lirc_dev</H1>
+    <HR WIDTH="70%">
+
+    <P>
+      The <em>lirc_dev</em> module is a helper and abstraction layer
+      for other modules.  It registers <em>/dev/lirc</em> device in a
+      system (including support for devfs) and waits for plugin
+      registration.  After that it serves device requests (open, read,
+      poll, ioctl, close) and if needed calls callback functions from
+      plugin(s) to communicate with the physical device.
+    </P>
+    <P>
+      Plugins can be registered and unregistered many times. The
+      current implementation allows two concurrent plugins, but can be
+      easily changed by increasing the MAX_IRCTL_DEVICES
+      definition. It also allows receiving of scan codes, which have
+      more than 8 bits. Current limit for a scan code is 16*8 bits and
+      also can be changed by increasing the BUFLEN definition.
+    </P>
+    <P>
+      For an API description see <em>lirc_dev.h</em>. The lirc_gpio
+      module can be treated as examples of using this API.<br> This
+      code contains many lines with debug messages (activated by
+      <em>debug</em> option) and they will sustain until more tests
+      will be performed.
+    </P>
+    <P>
+      <B>Warning:</B> Due to the used kernel API it requires kernel
+      2.2.4 or higher.<br> Any suggestions and questions are
+      welcome. <A href="mailto:alipowski@interia.pl">Artur
+        Lipowski</A>
+    </P>
+
+    <!-- Writing LIRC Applications +++++++++++++++++++++++++++++++++++++++ -->
+
+    <A NAME="applications"></A><HR>
+    <H1 ALIGN="CENTER">Writing Applications for LIRC</H1>
+    <HR WIDTH="70%">
+
+    <P>
+      As LIRC is able to both receive and send IR commands there are
+      two possible types of applications. Programs that send IR
+      commands like <em>xrc</em> and <em>irsend</em> or programs that
+      receive commands like <em>irexec</em>, <em>irxevent</em> and
+      <em>irpty</em>.  Both types of applications will have to connect
+      to the lircd daemon using the socket interface usually located
+      in /var/run/lirc/lircd. Communication on the socket uses human
+      readable format. The end of a line is indicated by a newline
+      character.
+    </P>
+    <P>
+      Whenever lircd receives a IR signal it will broadcast the
+      following string to each client:</P>
+    <PRE>
+  &lt;code&gt; &lt;repeat count&gt; &lt;button name&gt; &lt;remote control name&gt;</PRE>
+    <P>
+      <em>code</em> is a 64-bit encoding (in hexadecimal
+      representation) of the IR signal. It's usage in applications is
+      deprecated and should be ignored. The <em>repeat count</em>
+      shows how long the user has been holding down a button. The
+      counter will start at 0 and increment each time a new IR signal
+      has been received. The <em>button name</em> and <em>remote
+      control name</em> are defined in the lircd config file. Their
+      purpose should be quite self-explanatory. They must not contain
+      any whitespace.<BR>
+
+      The only other situation when lircd broadcasts to all clients is
+      when it receives the SIGHUP signal and successfully re-reads its
+      config file. Then it will send a SIGHUP packet to its clients
+      indicating that its configuration might have changed. This
+      feature is <NOBR>e.g.</NOBR> used in <em>xrc</em> to rebuild the
+      list of supported remote controls each time lircd's
+      configuration changes. The format of the packet will be
+      explained later.
+    </P>
+    <P>
+      <i>NOTE: As of 0.9.2+, this way of sending data is obsolete since
+      sending is supported directly in the API. See the API documentation,</i>
+      Applications that want to send out IR commands can use the
+      following commands:
+      </P>
+    <PRE>
+  SEND_ONCE &lt;remote control name&gt; &lt;button name&gt; [&lt;repeat count&gt;]
+  SEND_START &lt;remote control name&gt; &lt;button name&gt;
+  SEND_STOP &lt;remote control name&gt; &lt;button name&gt;</PRE>
+    <P>
+      The SEND_ONCE directive tells lircd to send the IR signal
+      associated with the given remote control and button name, and then
+      repeat it <var>repeat count</var> times. <var>repeat count</var> is
+      a decimal number between 0 and <var>repeat_max</var>. The latter
+      can be given as a command line argument to lircd, and defaults
+      to 600.  If <var>repeat count</var> is
+      not specified or is less than the minimum number of repeats
+      for the selected remote control, the minimum value will be
+      used. SEND_START tells lircd to start repeating the
+      given button until it receives a SEND_STOP command. However, the
+      number of repeats is limited to <var>repeat_max</var>. lircd
+      won't accept any new send commands while it is repeating.
+    </P>
+    <P>
+      lircd also understands the following commands:
+    </P>
+    <PRE>
+  VERSION
+  LIST [&lt;remote control name&gt;]</PRE>
+    <P>
+      The response to the VERSION command will be a packet containing
+      lircd's version.<BR>
+
+      The LIST command without further arguments can be used to get a
+      list of all remote controls known to lircd. If a name of a
+      supported remote control is given as argument all buttons of the
+      given remote control are listed in the reply packet. Have a look
+      at <em>xrc</em> for an example how this can be used.
+    </P>
+    <P>
+      There still remains to explain the format of lircd's reply
+      packets. Here is a formal description of the packets:
+    </P>
+    <PRE>
+  BEGIN
+  &lt;command&gt;
+  [SUCCESS|ERROR]
+  [DATA
+  n
+  n lines of data]
+  END</PRE>
+    <P>
+      The protocol guarantees that broadcasted messages won't
+      interfere with reply packets. But broadcasts may appear at any
+      point between packets. <em>command</em> is the command lircd is
+      currently processing. Its an exact copy of the command the
+      client application has sent. The only exception are SIGHUP
+      packages where <em>command</em> is substituted with SIGHUP. Note
+      that SIGHUP packages may appear just after you have sent a
+      command to lircd, so you have to make sure you don't confuse
+      them with replies. SIGHUP packages come without any further data
+      while each reply to a command contains either SUCCESS or ERROR
+      indicating the result of processing the command. In case of an
+      error the following data is a message explaining the
+      problem. This message can be used to create an error message for
+      the user.<BR>
+
+      If the command was successful, data is only sent for the
+      commands that return some information. Note that a packet
+      containing 0 lines of data can be a valid reply.
+    </P>
+
+    <!-- Writing LIRC Applications +++++++++++++++++++++++++++++++++++++++ -->
+
+    <A NAME="library"></A><HR>
+
+    <H2 ALIGN="CENTER">The lirc_client library</H2>
+    <HR WIDTH="70%">
+
+    <P>
+      If you only want to make your application to send or receive
+      IR commands and if you don't want to mess with all the protocol stuff
+      you can use the <a href="lirc_client.html" >lirc_client api</a>.
+
+    </P>
+
+    <A NAME="lircrcd"></A><HR>
+    <H1 ALIGN="CENTER">lircrcd protocol</H1>
+    <HR WIDTH="70%">
+
+    <P>
+      lircrcd syntactically uses the same protocol as lircd described
+      in the last section. It supports the following commands:
+    </P>
+    <DL>
+      <DT>IDENT <em>ident</em></DT>
+      <DD>
+        <P>
+          Each program connecting to lircrcd identifies itself using
+          this program. <em>ident</em> is the string that is used in
+          the prog token inside the .lircrc file.
+        </P>
+      </DD>
+      <DT>CODE <em>code</em></DT>
+      <DD>
+        <P>
+          When the client receives the <em>code</em> string from lircd
+          it will send it to lircrcd and will receive back the
+          applicable config string from the .lircrc config file. It
+          should resend the CODE command until nothing is returned
+          back which means that nothing (more) should happen in
+          response to <em>code</em>. This command is used each time
+          the lirc_code2char() function is called by a client.
+        </P>
+      </DD>
+      <DT>GETMODE</DT>
+      <DD>
+        <P>
+          lircrcd will return the current mode string.
+        </P>
+      </DD>
+    </DL>
+
+    <A NAME="hal"></A><HR>
+    <H1 ALIGN="CENTER">Hardware Abstraction Layer (HAL) integration</H1>
+    <HR WIDTH="70%">
+
+    <P>
+      If your system support the <a href="http://www.freedesktop.org/wiki/Software/hal">FreeDesktop Hardware Abstraction Layer (HAL)</a>,
+      you will want to install the file <em>contrib/hal/20-ircontrol-lirc.fdi</em> in
+      <em>${datarootdir}/hal/fdi/information/20thirdparty</em>
+    </P>
+    <P>
+      This file can be generated at will using contrib/hal/gen-hal-fdi.pl.<br>
+      Installing 20-ircontrol-lirc.fdi allow applications developers to detect
+      USB remotes easily by searching for HAL devices with <em>info.capabilities=input.remote_control</em>
+    </P>
+    <P>
+      This is a work in progress. We will also provide more information in the
+      future, such as the driver/manufacturer/device name(s), and possibly
+      event reporting.
+    </P>
+
+    <A NAME="config"></A><HR>
+    <H1 ALIGN="CENTER">Note for configuration application developers</H1>
+    <HR WIDTH="70%">
+
+    <P>
+      If you want to make a configuration application, lirc provides
+      a parseable list of LIRC supported devices.<br>
+      <br>
+      This file is generated at compilation time, along with its <a href="table.html">HTML
+      equivalent</a> and is available as doc/lirc.hwdb in the source tree.
+      It should also be installed by the binary packages of your prefered
+      distribution (bug report otherwise!).
+      <br><br>
+      The format is:
+      <br>
+      [remote controls type]<br>
+      description;driver;lirc driver;HW_DEFAULT;lircd_conf;<br>
+      The HW_DEFAULT entry is always empty.
+    </P>
+
+    <A NAME="bugs"></A><HR>
+    <H1 ALIGN="CENTER">Known bugs</H1>
+    <HR WIDTH="70%">
+
+    <UL>
+      <LI>
+        <p> The general lirc bugtracker is at the
+            <a href=https://sourceforge.net/p/lirc/tickets> sourceforge
+            website</a>. </p>
+        <P>
+          If you use the <em>lirc_serial</em> or
+          <em>lirc_parallel</em> driver regularly to transmit
+          infra-red signals you might notice that your system clock
+          will slow down. During transmit the driver turns off
+          interrupts and hence some clock interrupts might get lost
+          causing system clock inaccuracy. Unfortunately in order to
+          ensure a good signal timing interrupts have to be
+          disabled. Currently no work-around is known for this problem
+          except using a program like <em>netdate</em> to synchronize
+          your system clock regularly.
+        </P>
+      </LI>
+      <LI>
+        <P>
+          The <em>lirc_serial</em> and <em>lirc_parallel</em> drivers
+          measure the time between interrupts on the serial resp.
+          parallel port to get a pulse and space representation of the
+          incoming infra-red signal. If interrupts are disabled by the
+          CPU for a rather long time (&gt;100 &micro;s, which happens
+          often e.g. during heavy IDE disk activity) some interrupts
+          might get lost and the incoming data stream becomes
+          disturbed. In this case decoding of the infra-red signal
+          will fail. This is the downside of the really simple
+          receiver circuits and can't be addressed in software except
+          keeping the time where interrupts are disabled to a minimum.
+        </P>
+        <P>
+          If you are using an IDE system you might want to try calling
+          <em>hdparm -u1 -d1</em> for all of your drives. This enables
+          DMA for the drive and allows the driver to unmask other
+          interrupts during handling of a disk interrupt. But be aware
+          that this can be dangerous for some (buggy) IDE
+          chipsets. Consult the hdparm man page for further
+          information.
+        </P>
+      </LI>
+    </UL>
+
+
+<!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+                <BR><BR>
+                <CENTER>[<A HREF="http://www.lirc.org/">LIRC homepage</A>]<BR>
+                  <I>The LIRC Manual, last update: 10-June-2014</I></CENTER>
+                <BR><BR>
+              </TD>
+              <TD WIDTH="15%">&#160;<BR></TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+      <TR>
+        <TD CLASS="menu" WIDTH="100%">&#160;<BR>
+        </TD>
+      </TR>
+    </TABLE>
+  </BODY>
+</HTML>

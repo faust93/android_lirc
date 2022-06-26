@@ -1,0 +1,309 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<HTML>
+  <HEAD>
+    <TITLE>LIRC - Linux Infrared Remote Control</TITLE>
+    <LINK REL=stylesheet TYPE="text/css" HREF="../lirc.css">
+    <LINK REL="shortcut icon" HREF="../favicon.ico">
+    <META NAME="description" CONTENT="LIRC - Linux Infra-red Remote Control">
+    <META NAME="keywords" CONTENT="linux, kernel module, remote control, animax, multimedia">
+  </HEAD>
+
+  <BODY BACKGROUND="../images/marb18.jpg"
+    BGCOLOR="#FFFFFF" TEXT="#000000" ALINK="#8080FF">
+    <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR>
+        <TD CLASS="menu" WIDTH="100%" HEIGHT="150">
+          <IMG SRC="../images/diode.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="LEFT">
+          <IMG SRC="../images/lirc.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="RIGHT">
+        </TD>
+      </TR>
+      <TR>
+        <TD WIDTH="100%">&#160;<BR>
+          <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+            <TR>
+              <TD WIDTH="15%">&#160;<BR></TD>
+              <TD WIDTH="70%" ALIGN="LEFT" VALIGN="TOP">&#160;<BR>
+
+<!-- Text ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+<H1>lirc-config-tool</H1>
+<A HREF="../html/index.html">Return to Main Contents</A><HR>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+lirc-config-tool - tool to scan and generate lirc config files
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<BR>
+
+<B>lirc-config-tool </B>  -s|-u [ -c FILE]
+
+<BR>
+
+<B>lirc-config-tool </B> [-o DIR] [-d] [-c FILE] [FILES]
+
+<BR>
+
+<B>lirc-config-tool </B>  -l
+
+<BR>
+
+<A NAME="lbAD">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+Without options, generates all available application specific lircrc
+files  in ~/.config/lirc. The optional [files] is a list of files to
+build or dump, as listed by -l.
+<DL COMPACT>
+<DT><B>-s</B><DD>
+Scan lircd file for key symbols which are duplicated or not in namespace.
+<DT><B>-u</B><DD>
+Update existing lircd file to use key symbols in namespace.
+<DT><B>-l</B><DD>
+List available files to generate.
+<DT><B>-d</B><DD>
+Dump file templates usable as stdin on stdout.
+<DT><B>-o &lt;dir&gt;</B><DD>
+Output directory, defaults to ~/.config/lirc
+<DT><B>-c &lt;lircd-filename&gt;</B><DD>
+<A HREF="../html/index.html?8+lircd">lircd</A>(8) config file, defaults to /etc/lirc/lircd.conf
+<DT><B>-h</B><DD>
+Print help message
+</DL>
+<P>
+
+<A NAME="lbAE">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<P>
+
+The script is designed to assist in the setup of the <A HREF="../html/index.html?8+lirc">lirc</A>(8)
+configuration files for ordinary remote controls. It is not aimed
+to handle full-blown keyboards or joystick devices. The generated
+lircrc files represents a starting point which will need further,
+manual refinements but might &quot;work&quot; in a basic sense in many cases.
+<P>
+
+The setup involves normalizing the lircd.conf to use symbols in the
+legal namespace, and to create application specific lircrc files which
+uses the normalized symbols.
+<P>
+
+To assist normalizing /etc/lircd.conf, the script can report symbols
+used which not are in the namespace. It can can also update many of
+these symbols to corresponding symbols within the namespace.
+<P>
+
+The script also can create application specific lircrc files such as
+mythtv.lircrc or vlc.lircrc. It then  uses  the normalized
+key symbols in /etc/lirdc.conf. By default, files are created in
+~/.config/lirc.
+<P>
+
+Generated lircrc files basically combines known keys from
+/etc/lirc/lircd.conf with template data for an application. The process
+results in a lircrc file, a list a of unused keys and some entries
+which don't match any existing key. The unused keys and unmatched entries
+are written as comments into the generated file.
+<P>
+An 'illegal' key i. e., a key not in namespace, will not match any entry
+and will thus always be unused. However, it's perfectly possible to
+use it later on while manually modifying the lircrc files.
+<P>
+
+When updating files, script always makes backup copies.
+<P>
+
+The generated lircrc files are intended to be included in a main
+~/.config/lircrc file. A minimal such might look like
+<DL COMPACT>
+<DT><DD>
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;include&nbsp;~/.config/lirc/mythtv.lircrc
+<P>
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>EXAMPLES</H2>
+
+<P>
+
+<P>
+Scan /etc/lirc/lircd.conf for duplicated symbols and symbols not in namespace:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool -s
+</DL>
+<P>
+
+Update a local lircd.conf file to use symbols in namespace:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool -uc ./lircd.conf
+</DL>
+<P>
+
+List available files to generate:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool -l
+</DL>
+<P>
+
+Generate one of the files listed by -l, creates ~/.config/lirc/mythtv.lircrc:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool mythtv
+</DL>
+<P>
+
+Dump template data  for mythtv:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool -d mythtv &gt;mythtv.lircdata
+</DL>
+<P>
+
+Use possibly edited data to create a modified mythtv.lircrc in current dir:
+<DL COMPACT>
+<DT><DD>
+lirc-config-tool -o . stdin &lt; mythtv.lircdata
+<P>
+</DL>
+<A NAME="lbAG">&nbsp;</A>
+<H2>LIRCD.CONF CONVERSIONS</H2>
+
+The -s option simply reports all key symbols not in namespace. It also
+reports some symbols which although legal are inappropriate in this
+context, notably KEY_NUMERIC_0..KEY_NUMERIC_9. If present, duplicated
+keys are also reported.
+<P>
+The -u option converts several known symbols to their corresponding
+KEY_* symbols. Symbols which have names like KEY_WINDOWS but not are in
+namespace gets a X_ prefix e. g., KEY_WINDOWS -&gt; X_KEY_WINDOWS. The
+converted file thus guarantees that any key symbol starting with
+KEY_ is a legal symbol.
+<P>
+All known numeric keys such as '1', 'KEY_1', 'KEY_KP_1', 'KEY_NUMERIC_1
+<BR>&nbsp;are&nbsp;converted&nbsp;to&nbsp;KEY_1.
+<P>
+All modifications are marked by comments in file.
+<P>
+<A NAME="lbAH">&nbsp;</A>
+<H2>EXTENDING</H2>
+
+The script can be extended to support more applications by providing a shell
+function named *.lircdata. E. g., to add a new application named
+&quot;my_app&quot; based on the built-in vlc application:
+<P>
+
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&nbsp;lirc-config-tool&nbsp;-d&nbsp;vlc&nbsp;&gt;my_app.lircdata
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&nbsp;function&nbsp;my_app_lircdata()
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&gt;&nbsp;{
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&gt;&nbsp;&nbsp;&nbsp;&nbsp;cat&nbsp;my_app.lircdata
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&gt;&nbsp;}
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&nbsp;export&nbsp;-f&nbsp;my_app_lircdata
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$&nbsp;lirc-config-tool&nbsp;&nbsp;my_app
+
+<P>
+<A NAME="lbAI">&nbsp;</A>
+<H2>DATA FORMAT</H2>
+
+The script uses a simple, line-oriented format to represent the lircrc files.
+The purpose of the format is to be compact and thus to give a good overview,
+and also to be easy to parse.  Each line is divided in comma-separated tokens.
+There are four kind of lines.
+<P>
+
+Comment lines begins with a '#'. These are copied verbatim to the output file.
+<P>
+
+The first data line represents global items, applicable to all entrys. The
+first word is the program name. It's used in the first 'program=' line.
+Following words, if present, are optional lines which will be appended to each
+entry in the file.
+<P>
+
+A data line starting with 'begin' or 'end' is a  mode block designator. It's
+copied verbatim to output file.
+<P>
+
+All other data lines represents a button/config entry. The format is
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&lt;button&gt;&nbsp;&lt;config&gt;&nbsp;[extra]...
+
+<BR>
+
+The button value  is used in the  button = line, and the config item is used
+in the config = line. Both are mandatory. Following items, if any, are copied
+as verbatim lines to the entry.
+<P>
+
+An unlikely example: The data format
+<P>
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;myprog,&nbsp;flags&nbsp;=&nbsp;quit
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;begin&nbsp;volume_mode
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;KEY_VOLUMEUP,&nbsp;volume-up,&nbsp;delay=4,&nbsp;repeat=1
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;KEY_VOLUMEDOWN,&nbsp;volume-down
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;end&nbsp;volume_mode
+
+<P>
+
+translates to:
+<P>
+
+
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;begin&nbsp;volume_mode
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;begin
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;program&nbsp;=&nbsp;myprog
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;button&nbsp;&nbsp;=&nbsp;KEY_VOLUME_UP
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;config&nbsp;&nbsp;=&nbsp;volume-up
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;delay&nbsp;&nbsp;&nbsp;=&nbsp;4
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;repeat&nbsp;&nbsp;=&nbsp;1
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flags&nbsp;&nbsp;&nbsp;=&nbsp;quit
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;begin
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;program&nbsp;=&nbsp;myprog
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;button&nbsp;&nbsp;=&nbsp;KEY_VOLUME_DOWN
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;config&nbsp;&nbsp;=&nbsp;volume-down
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;flags&nbsp;&nbsp;&nbsp;=&nbsp;quit
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;end
+<BR>&nbsp;&nbsp;&nbsp;&nbsp;end&nbsp;volume_mode
+
+<P>
+<A NAME="lbAJ">&nbsp;</A>
+<H2>COPYRIGHT</H2>
+
+License GPLv2+: GNU GPL version 2 or later &lt;<A HREF="http://gnu.org/licenses/gpl.html">http://gnu.org/licenses/gpl.html</A>&gt;.
+<BR>
+
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+<A NAME="lbAK">&nbsp;</A>
+
+<!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+                <BR><BR>
+                <CENTER>[<A HREF="http://www.lirc.org/">LIRC homepage</A>]<BR>
+                  <I>The LIRC Manual, last update: 10-June-2014</I></CENTER>
+                <BR><BR>
+              </TD>
+              <TD WIDTH="15%">&#160;<BR></TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+      <TR>
+        <TD CLASS="menu" WIDTH="100%">&#160;<BR>
+        </TD>
+      </TR>
+    </TABLE>
+  </BODY>
+</HTML>

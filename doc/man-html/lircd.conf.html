@@ -1,0 +1,393 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<HTML>
+  <HEAD>
+    <TITLE>LIRC - Linux Infrared Remote Control</TITLE>
+    <LINK REL=stylesheet TYPE="text/css" HREF="../lirc.css">
+    <LINK REL="shortcut icon" HREF="../favicon.ico">
+    <META NAME="description" CONTENT="LIRC - Linux Infra-red Remote Control">
+    <META NAME="keywords" CONTENT="linux, kernel module, remote control, animax, multimedia">
+  </HEAD>
+
+  <BODY BACKGROUND="../images/marb18.jpg"
+    BGCOLOR="#FFFFFF" TEXT="#000000" ALINK="#8080FF">
+    <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+      <TR>
+        <TD CLASS="menu" WIDTH="100%" HEIGHT="150">
+          <IMG SRC="../images/diode.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="LEFT">
+          <IMG SRC="../images/lirc.gif" ALT=""
+            WIDTH="300" HEIGHT="150" BORDER="0" HSPACE="20"
+            VSPACE="0" ALIGN="RIGHT">
+        </TD>
+      </TR>
+      <TR>
+        <TD WIDTH="100%">&#160;<BR>
+          <TABLE WIDTH="100%" BORDER="0" CELLSPACING="0" CELLPADDING="0">
+            <TR>
+              <TD WIDTH="15%">&#160;<BR></TD>
+              <TD WIDTH="70%" ALIGN="LEFT" VALIGN="TOP">&#160;<BR>
+
+<!-- Text ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+<H1>LIRCD.CONF</H1>
+<A HREF="../html/index.html">Return to Main Contents</A><HR>
+
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
+
+lircd.conf - lirc main configuration file
+<A NAME="lbAC">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+The file has two purposes: to provide timing information to the driver
+so it can decode the data to button presses, and to provide a mapping
+from button presses to key symbols used by <A HREF="../html/index.html?8+lircd">lircd</A>(8).
+<P>
+
+The basic structure is a list of remote blocks.  Whitespace and line
+breaks are used as delimiters.
+<P>
+
+If the comment character (#) appears as the first character on a line
+the rest of the line is ignored.
+<A NAME="lbAD">&nbsp;</A>
+<H2>REMOTE BLOCKS</H2>
+
+Remote blocks are either normal or raw.
+<P>
+
+Normal remote blocks begin with
+<B>begin remote</B>
+
+and ends with
+<B>end remote.</B>
+
+The first part of the block describes the basic properties of the
+remote, see REMOTE DESCRIPTION SECTION.  Following this is a codes
+section, which is delimited by
+<B>begin codes</B>
+
+and
+<B>end codes.</B>
+
+<P>
+Each line in a codes section contains the name of a button on the remote
+followed by a hexidecimal data value matching the data part of the IR
+frame (see REMOTE DESCRIPTION SECTION). You may not assign the same name
+to two buttons in the same remote section.
+<P>
+
+Raw remote blocks are identical to normal blocks besides the codes
+section which is a list of button descriptions enclosed by
+<B>begin raw_codes</B>
+
+and
+<B>end raw_codes.</B>
+
+<P>
+A raw button description begins with the parameter
+<B>name</B>
+
+followed by
+the name of the button. The button description ends with the next button
+description or the end of the raw_codes block. The lines in between is a
+list of decimal numbers describing the signal sent by that button. The
+first number indicates the duration of the first pulse in microseconds.
+The second number indicates the duration of the space which follows it.
+Pulse and space durations alternate for as long as is necessary. The
+last duration should represent a pulse.
+<A NAME="lbAE">&nbsp;</A>
+<H2>REMOTE DESCRIPTION SECTION</H2>
+
+Each line in this section contains a parameter followed by the value or
+values that should be assigned to that parameter. Parameters
+are optional unless otherwise stated.
+<P>
+
+All values are decimal integers that are either dimensionless or have units
+of microseconds unless otherwise stated. Hexidecimal numbers should be
+prefixed by 0x. If the remote does not have a particular &quot;feature,&quot; then
+the line may be omitted. The button code is sent just after the pre signal
+and just before the post signal.
+<P>
+
+Some parameters describe the bits in the IR protocol. The frame is
+normally defined like
+<DL COMPACT>
+<DT><DD>
+|header|plead|pre data|pre|data|post|post data|ptrail|foot|gap|
+</DL>
+<P>
+
+where most parameters defaults to 0. Some parameters change the overall
+frame layout e. g., the repeat parameter.
+<P>
+<DL COMPACT>
+<DT><B>include ''&lt;path&gt;''</B>
+
+<DD>
+Include the given path using normal
+<I>include</I>
+
+semantics. If the path is relative, it's  interpreted relative to the
+main lircd.conf file. &lt;path&gt; must be enclosed in double quotes. It can
+contain a <A HREF="../html/index.html?3+glob">glob</A>(3) pattern in which case all matching files are included.
+<DT><B>manual_sort &lt;1|0&gt;</B>
+
+<DD>
+Normally, lircd tries to sort multiple remotes so the one which decodes
+fastest are used first. Setting manual_sort to 1 in any remote disables
+this and uses the remotes in the order they are listed in lircd.conf or
+as the alphanumerically sorted filenames in lircd.conf.d.
+<DT><B>name &lt;remote name&gt;</B>
+
+<DD>
+The unique name assigned to the remote control (may not contain whitespace).
+Within a single file all names must be unique. Parameter is mandatory.
+<DT><B>flags &lt;flag1&gt;&lt;|flag2&gt;...</B>
+
+<DD>
+Flags are special text strings which describe various properties of the
+remote and determine the semantics of some of the following fields.
+Multiple flags should be separated by the pipe(|) symbol.  See FLAGS.
+<DT><B>driver &lt;driver name&gt;</B>
+
+<DD>
+For lirccode drivers which does not have timing information the optional
+driver attribute names the driver which is required to use this remote.
+<DT><B>bits &lt;number of data bits&gt;</B>
+
+<DD>
+The number of data bits in the hexidecimal codes which describe each
+button (decimal integer).
+<DT><B>eps &lt;relative error tolerance&gt;</B>
+
+<DD>
+The relative error tolerance for received signals in percent. By default,
+irrecord set this to 30 (i. e., 30%).
+<DT><B>aeps &lt;absolute error tolerance&gt;</B>
+
+<DD>
+The absolute error tolerance for received signals (microseconds). The
+default is the hardcoded driver dependent resolution value. By
+default irrecord sets this to 100.
+<DT><B>header &lt;phead&gt; &lt;shead&gt;</B>
+
+<DD>
+The initial pulse and space sent (microseconds).
+<DT><B>three &lt;pthree&gt; &lt;sthree&gt;</B>
+
+<DD>
+Only used by RC-MM remotes
+<DT><B>two &lt;ptwo&gt; &lt;stwo&gt;</B>
+
+<DD>
+Only used by RC-MM remotes
+<DT><B>one &lt;pone&gt; &lt;sone&gt;</B>
+
+<DD>
+The pulse and space lengths representing a one.
+<DT><B>zero &lt;pzero&gt; &lt;szero&gt;</B>
+
+<DD>
+The pulse and space lengths representing a zero.
+<DT><B>ptrail &lt;trailing pulse&gt;</B>
+
+<DD>
+A trailing pulse, immediately following the post_data.
+<DT><B>plead &lt;leading pulse&gt;</B>
+
+<DD>
+A leading pulse, immediately after the header.
+<DT><B>foot &lt;pfoot&gt; &lt;sfoot&gt;</B>
+
+<DD>
+A pulse and space, immediately following the trailing pulse.
+<DT><B>repeat &lt;prepeat&gt; &lt;srepeat&gt;</B>
+
+<DD>
+A pulse and space that replaces everything between leading pulse and the
+trailing pulse, whenever a signal is repeated. The foot is not sent, and
+the header is not sent unless the REPEAT_HEADER flag is present.
+<DT><B>pre_data_bits &lt;number of pre_data_bits&gt;</B>
+
+<DD>
+The number of bits in the pre_data code.
+<DT><B>pre_data &lt;hexidecimal number&gt;</B>
+
+<DD>
+Hexidecimal code indicating the sequence of ones and zeros immediately
+following the leading pulse.
+<DT><B>post_data_bits &lt;number of post data bits&gt;</B>
+
+<DD>
+The number of bits in the post_data code.
+<DT><B>post_data &lt;hexidecimal number&gt;</B>
+
+<DD>
+Hexidecimal code indicating the sequence of ones and zeros immediately
+following the post signal.
+<DT><B>pre &lt;ppre&gt; &lt;spre&gt;</B>
+
+<DD>
+A pulse and space immediately following the pre_data.
+<DT><B>post &lt;ppost&gt; &lt;spost&gt;</B>
+
+<DD>
+A pulse and space immediately following the button code.
+<DT><B>gap &lt;gap length&gt;</B>
+
+<DD>
+A (typically long) space which follows the trailing pulse.
+<DT><B>repeat_gap &lt;repeat_gap length&gt;</B>
+
+<DD>
+A gap immediately following the trailing pulse, and preceding a repetition
+of the same code that's due to a the same press of the button.
+<DT><B>min_repeat &lt;minimum number of repetitions&gt;</B>
+
+<DD>
+The minimum times a signal is repeated when sent. Note that 0 means the
+signal is sent only once. Not used when receiving.
+<DT><B>toggle_bit &lt;bit to toggle&gt;</B>
+
+<DD>
+A bit of the pre_data, code, or post_data that is toggled between one and
+zero each time a button is pressed. This parameter is obsoleted by
+toggle_bit_mask and should be used in new configs.
+<DT><B>toggle_bit_mask &lt;hexadecimal mask&gt;</B>
+
+<DD>
+Bits which are  toggled between one and zero each time a button is pressed.
+The mask is applied to the concatenated value of pre data - data - post_data.
+<DT><B>repeat_mask &lt;mask&gt;</B>
+
+<DD>
+Mask defines which bits are inverted for repeats.
+<DT><B>frequency &lt;hertz&gt;</B>
+
+<DD>
+Remote carrier frequency, defaults to 38000.
+<DT><B>duty_cycle &lt;on time&gt;</B>
+
+<DD>
+The percentage of time during a pulse that infrared light is being sent
+(default is 50).
+<P>
+</DL>
+<A NAME="lbAF">&nbsp;</A>
+<H2>FLAGS</H2>
+
+<P>
+Flags are values set in the flags parameter.
+<DL COMPACT>
+<DT><B>RC5</B>
+
+<DD>
+The remote uses the RC5 protocol.
+<DT><B>RC6</B>
+
+<DD>
+The remote uses the RC6 protocol.
+<DT><B>RCMM</B>
+
+<DD>
+The remote uses the RC-MM protocol (transmitting not supported).
+<DT><B>SHIFT_ENC</B>
+
+<DD>
+Obsolete flag, now a synonym for RC5. The position of the pulse
+(before or after the space) determines whether the bit is a one
+or a zero.
+<DT><B>SPACE_ENC</B>
+
+<DD>
+A one and a zero can be distinguished by the length of the spaces,
+used by the NEC protocol and others.
+<DT><B>REVERSE</B>
+
+<DD>
+Reverses the bit order of the pre_data, the post_data and the codes
+(e.g., 0x123 becomes 0xC48). If this flag is present, the least
+significant bit is sent first.
+<DT><B>NO_HEAD_REP</B>
+
+<DD>
+The header is not sent when a signal (the button is held down) is
+repeated even though there is no special repeat code.
+<DT><B>NO_FOOT_REP</B>
+
+<DD>
+The foot is not sent when a signal is repeated (the button is held
+down) even though there is no special repeat code .
+<DT><B>CONST_LENGTH</B>
+
+<DD>
+The total signal length is always constant. The gap length now represents
+the length of the entire signal, and the actual gap at the end of the
+signal is adjusted accordingly.
+<DT><B>RAW_CODES</B>
+
+<DD>
+The codes are in raw format.
+<DT><B>REPEAT_HEADER</B>
+
+<DD>
+Send the header when the signal is repeated even though the remote has a
+special repeat code.
+</DL>
+<P>
+
+<A NAME="lbAG">&nbsp;</A>
+<H2>DISCLAIMER</H2>
+
+LIRC was designed to collect IR data and save it in a private, compact,
+yet human readable format with the purpose of being able to re-transmit
+(or re-recognize) these signals. It was not designed with the goal of
+providing a well documented and tested configuration file format that
+could be used e.g., to generate arbitrary IR signals or to convert them
+to other formats. The configuration file should thus not be considered a
+public interface to LIRC.
+<P>
+
+This manpage should be understood with this in mind. It was authored by
+reading the code of LIRC, and does not constitute an authoritative
+specification of the behavior of LIRC and its configuration file.  Also,
+some less commonly used flags and parameters are not documented.
+<P>
+<P>
+
+<A NAME="lbAH">&nbsp;</A>
+<H2>SEE&nbsp;ALSO</H2>
+
+<DL COMPACT>
+<DT><A HREF="../html/index.html?8+lircd">lircd</A>(8)<DD>
+<DT><A HREF="../html/index.html?1+irrecord">irrecord</A>(1)<DD>
+<DT><A HREF="http://en.wikipedia.org/wiki/RC-5">http://en.wikipedia.org/wiki/RC-5</A><DD>
+<DT><A HREF="http://www.sbprojects.com/knowledge/ir/">http://www.sbprojects.com/knowledge/ir/</A><DD>
+<P>
+</DL>
+
+<HR>
+
+<!-- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ -->
+
+                <BR><BR>
+                <CENTER>[<A HREF="http://www.lirc.org/">LIRC homepage</A>]<BR>
+                  <I>The LIRC Manual, last update: 10-June-2014</I></CENTER>
+                <BR><BR>
+              </TD>
+              <TD WIDTH="15%">&#160;<BR></TD>
+            </TR>
+          </TABLE>
+        </TD>
+      </TR>
+      <TR>
+        <TD CLASS="menu" WIDTH="100%">&#160;<BR>
+        </TD>
+      </TR>
+    </TABLE>
+  </BODY>
+</HTML>
