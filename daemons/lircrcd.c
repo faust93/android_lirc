@@ -111,7 +111,7 @@ static struct lirc_config *config;
 static int send_error(int fd, char *message, char *format_str, ...);
 static int handle_input();
 
-static inline int max(int a, int b)
+static int max(int a, int b)
 {
 	return (a > b ? a : b);
 }
@@ -153,7 +153,7 @@ char *s;
 /* A safer write(), since sockets might not write all but only some of the
    bytes requested */
 
-inline int write_socket(int fd, char *buf, int len)
+int write_socket(int fd, char *buf, int len)
 {
 	int done, todo = len;
 
@@ -167,7 +167,7 @@ inline int write_socket(int fd, char *buf, int len)
 	return (len);
 }
 
-inline int write_socket_len(int fd, char *buf)
+int write_socket_len(int fd, char *buf)
 {
 	int len;
 
@@ -177,7 +177,7 @@ inline int write_socket_len(int fd, char *buf)
 	return (1);
 }
 
-inline int read_timeout(int fd, char *buf, int len, int timeout)
+int read_timeout(int fd, char *buf, int len, int timeout)
 {
 	fd_set fds;
 	struct timeval tv;
