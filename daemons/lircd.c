@@ -2092,13 +2092,12 @@ static int mywaitfordata(long maxusec)
 				continue;
 			}
 			gettimeofday(&now, NULL);
-			if (timerisset(&release_time) && timercmp(&now, &release_time - dedup_delay, >)) {
+			if (timerisset(&release_time) && timercmp(&now, &release_time - 30000, >)) {
 				const char *release_message;
 				const char *release_remote_name;
 				const char *release_button_name;
 
 				release_message = trigger_release_event(&release_remote_name, &release_button_name);
-				logprintf(LIRC_ERROR, "RELEASE");
 
 				if (release_message) {
 					input_message(release_message, release_remote_name, release_button_name, 0, 1);
