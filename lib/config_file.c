@@ -60,7 +60,7 @@ struct void_array {
 };
 
 
-#define LINE_LEN 1024
+#define LINE_LEN 4096
 #define MAX_INCLUDES 10
 
 const char *whitespace = " \t";
