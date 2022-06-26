@@ -43,6 +43,7 @@
 #include <unistd.h>
 
 #include "lirc_client.h"
+#include<netinet/in.h>
 
 /** Timeout in lirc_read_string. */
 static const struct timeval CMD_TIMEOUT = {.tv_sec = 1, .tv_usec = 0};
