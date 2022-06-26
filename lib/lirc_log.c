@@ -308,11 +308,11 @@ int lirc_log_get_clientlog(const char* basename, char* buffer, ssize_t size)
 		buffer[size - 1] = '\0';
 		strncat(buffer, "/", size - strlen(buffer) - 1);
 	} else {
-	    	home = getenv("HOME");
-		home = home != NULL ? home : "/";
+	    	home = getenv("LIRC_HOME");
+		home = home != NULL ? home : "/data/local/lirc";
 		strncpy(buffer, home, size);
 		buffer[size - 1] = '\0';
-		strncat(buffer, "/.cache/", size - strlen(buffer) - 1);
+		strncat(buffer, "/log/", size - strlen(buffer) - 1);
 	}
 	strncat(buffer, basename, size - strlen(buffer) - 1);
 	strncat(buffer, ".log", size - strlen(buffer) - 1);
